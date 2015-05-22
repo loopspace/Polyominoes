@@ -9,11 +9,69 @@
     <script type="text/javascript">
       window.onload = init;
     </script>
+	<style type="text/css">
+		.net {
+			padding: 1em;
+			vertical-align: top;
+		}
+		#nets {
+			display: inline;
+		}
+		.grid {
+			vertical-align: top;
+			float left;
+		}
+		#nsq {
+			padding-bottom: 1ex;
+		}
+		.ralign {
+			text-align: right;
+		}
+	</style>
   </head>
   <body>
-    <canvas id="net" height="500" width="500" style="vertical-align: top">
+	<div id="nsq">
+		<form id="nsqform">
+			<label for="len">Number of squares</label>
+			<select name="len" id="len">
+				<option value="2">2</option>
+				<option value="3">3</option>
+				<option value="4">4</option>
+				<option value="5">5</option>
+				<option value="6">6</option>
+				<option value="7">7</option>
+				<option value="8">8</option>
+				<option value="9">9</option>
+				<option value="10">10</option>
+			</select>
+			<input type="button" id="start" name="start" value="start">
+		</form>
+		<table>
+			<tr>
+				<td>
+					Time elapsed:
+				</td>
+				<td id="dtime" class='ralign'>0</td>
+				<td>s.</td>
+			</tr>
+			<tr>
+				<td>
+					Last shape found at:
+				</td>
+				<td id="ltime" class='ralign'>0</td>
+				<td>s.</td>
+			</tr>
+			<tr>
+				<td>
+					Shapes found:
+				</td>
+				<td id="nshapes" class='ralign'>0</td>
+			</tr>
+		</table>
+	</div>
+    <canvas id="net" height="500" width="500" class="grid">
     </canvas>
-    <canvas id="nets" height="500" width="500" style="vertical-align: top">
-    </canvas>
-  </body>
+	<div id="nets">
+	</div>
+	</body>
 </html>
