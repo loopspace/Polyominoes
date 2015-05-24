@@ -14,12 +14,11 @@
       padding: 1em;
       vertical-align: top;
       }
-      #nets {
-      display: inline;
+      #nets div {
+      text-align: center;
       }
       .grid {
       vertical-align: top;
-      float: left;
       }
       #nsq {
       padding-bottom: 1ex;
@@ -57,6 +56,11 @@
 	  <option value="18">18</option>
 	  <option value="19">19</option>
 	  <option value="20">20</option>
+	</select><br>
+	<label for="shall">Show all shapes</label>
+	<select name="shall" id="shall">
+	  <option value="true">true</option>
+	  <option value="false">false</option>
 	</select>
 	<input type="button" id="start" name="start" value="start">
       </form>

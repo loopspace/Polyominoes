@@ -1,8 +1,10 @@
 var ctx;
 var ndiv;
+var ndivs;
 var nctx;
 var mlvl;
 var grid;
+var shall;
 
 var sqsize = 20;
 var halt;
@@ -14,6 +16,7 @@ var net;
 var dirs = [[0,1],[1,0],[0,-1],[-1,0]];
 var nets;
 var adder;
+var children = {};
 
 var stime;
 var dtime;
@@ -34,9 +37,15 @@ function init() {
 }
 
 function start() {
-    var i,fn,cvs,nmbr;
+    var i,fn,cvs,nmbr,nd;
     nmbr = document.querySelector('#len');
     mlvl = nmbr.options[nmbr.selectedIndex].value;
+    nmbr = document.querySelector('#shall');
+    if (nmbr.options[nmbr.selectedIndex].value == 'true') {
+	shall = true;
+    } else {
+	shall = false;
+    }
     grid = {
 	x: 2*mlvl-3,
 	y: 2*mlvl-1,
@@ -45,6 +54,7 @@ function start() {
     wd = 0;
     rht = 0;
     halt = false;
+    children = {};
     stime = new Date().getTime();
     ltime.innerHTML = '0';
     dtime.innerHTML = '0';
@@ -54,7 +64,13 @@ function start() {
     ctx.canvas.width = grid.x * sqsize;
     ctx.canvas.height = grid.y * sqsize;
     while (ndiv.firstChild) ndiv.removeChild(ndiv.firstChild);
-
+    ndivs = [];
+    for (i=1; i<=mlvl; i++) {
+	nd = document.createElement('div');
+	nd.id = 'level' + i;
+	ndiv.appendChild(nd);
+	ndivs.push(nd);
+    }
     fn = function () {return ;};
     for (i=mlvl-1; i>0; i--) {
 	fn = makeAdder(i,fn);
@@ -66,22 +82,28 @@ function start() {
 }
 
 function draw() {
+    var i,j,e,ne,c,d,pnet,tnet,rnet;
     if (halt) {
 	return;
     }
     adder(true);
-    var i,j,e,ne,c,d;
-    if (!checkNet(net,nets)) {
+    rnet = checkNet(net,nets);
+    if (rnet) {
+	pnet = rnet;
+    } else {
 	if (!nets[net.length])
 	    nets[net.length] = [];
-	nets[net.length].push(normaliseNet(net));
-	if (net.length == mlvl) {
-	    addNet(net);
+	pnet = normaliseNet(net);
+	nets[net.length].push(pnet);
+	if (shall || net.length == mlvl) {
+	    addNet(pnet);
 	    nfound++;
 	    ltime.innerHTML = ((new Date().getTime() - stime)/1000).toFixed(3);
 	    nshapes.innerHTML = nfound;
 	}
     }
+    if (halt)
+	reorder();
     clear(ctx);
     ctx.save();
     ctx.fillStyle = '#ccc';
@@ -115,7 +137,7 @@ function makeAdder (lvl,fn) {
     var sq = 0;
     var nsq = -1;
     return function (stop) {
-	var newsq,isnew,i,added;
+	var newsq,isnew,i,added,rnet,pnet;
 	if (net.length < lvl) {
 	    return false;
 	}
@@ -149,8 +171,13 @@ function makeAdder (lvl,fn) {
 		}
 	    }
 	    if (isnew) {
+		pnet = normaliseNet(net);
 		net.push(newsq);
-		if (checkNet(net,nets)) {
+		rnet = checkNet(net,nets);
+		if (rnet) {
+		    if (!children[JSON.stringify(rnet)])
+			children[JSON.stringify(rnet)] = {};
+		    children[JSON.stringify(rnet)][JSON.stringify(pnet)] = true;
 		    net.pop();
 		    added = false;
 		} else {
@@ -212,7 +239,7 @@ function checkNet(n,ns) {
 		    }
 		}
 		if (equal) {
-		    return true;
+		    return ns[nl][l];
 		}
 	    }
 	}
@@ -237,7 +264,12 @@ function blockSort(p,q) {
 }
 
 function addNet(ne) {
-    var c,d,n,nctx,ncvs;
+    var c,d,n,nctx,ncvs,sqs;
+    if (shall) {
+	sqs = Math.floor(sqsize /(1+Math.log(ne.length)));
+    } else {
+	sqs = sqsize;
+    }
     c = [2*mlvl,2*mlvl];
     d = [0,0];
     for (i=0; i < ne.length;i++) {
@@ -255,16 +287,55 @@ function addNet(ne) {
     d[0]++;
     d[1]++;
     ncvs = document.createElement('canvas');
-    ncvs.width = d[0]*sqsize;
-    ncvs.height = d[1]*sqsize;
+    ncvs.width = d[0]*sqs;
+    ncvs.height = d[1]*sqs;
     ncvs.classList.add('net');
+    ncvs.id = 'shape' + hashcode(JSON.stringify(ne));
     nctx = ncvs.getContext('2d');
     nctx.save();
     nctx.beginPath();
     n.forEach(function(a) {
-	nctx.rect(a[0]*sqsize+2,a[1]*sqsize+2,sqsize-4,sqsize-4);
+	nctx.rect((a[0]+.1)*sqs,(a[1]+.1)*sqs,.8*sqs,.8*sqs);
     });
     nctx.fill();
     nctx.restore();
-    ndiv.appendChild(ncvs);
+    ndivs[ne.length-1].appendChild(ncvs);
+}
+
+
+// Source: http://stackoverflow.com/a/7616484/315213
+function hashcode(str) {
+  var hash = 0, i, chr, len;
+  if (str.length == 0) return hash;
+  for (i = 0, len = str.length; i < len; i++) {
+    chr   = str.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
+
+function reorder() {
+    var i,j,k,score,nj,parent,n,tmpdiv;
+    score = {};
+    for (i=1;i<nets.length;i++) {
+	for (j=0;j<nets[i].length;j++) {
+	    nj = JSON.stringify(nets[i][j]);
+	    score[nj] = 0;
+	    if (children[nj]) {
+		n = 0;
+		for (parent in children[nj]) {
+		    score[nj] += score[parent];
+		    n++;
+		}
+		score[nj] /= n;
+	    }
+	}
+	nets[i].sort(function(a,b) { return score[JSON.stringify(a)] - score[JSON.stringify(b)]});
+	for (j=0;j<nets[i].length;j++) {
+	    nj = JSON.stringify(nets[i][j]);
+	    score[nj] = j;
+	    ndivs[i-1].appendChild(document.querySelector('#shape' + hashcode(nj)));
+	}
+    }
 }
